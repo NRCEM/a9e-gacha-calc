@@ -1,3 +1,8 @@
+const API_BASE =
+  location.hostname === "localhost"
+    ? "http://127.0.0.1:8000"
+    : "https://a9e-gacha-calc-production.up.railway.app";
+
 let charChart = null;
 
 function pct(x) {
@@ -11,13 +16,15 @@ function drawLineChart(data) {
   charChart = new Chart(ctx, {
     type: "line",
     data: {
-      labels: data.map(p => p.x),
-      datasets: [{
-        label: "Current Limited (%)",
-        data: data.map(p => p.y * 100),
-        borderWidth: 2,
-        tension: 0.25
-      }]
+      labels: data.map((p) => p.x),
+      datasets: [
+        {
+          label: "Current Limited (%)",
+          data: data.map((p) => p.y * 100),
+          borderWidth: 2,
+          tension: 0.25,
+        },
+      ],
     },
     options: {
       responsive: true,
@@ -27,10 +34,10 @@ function drawLineChart(data) {
           min: 0,
           max: 100,
           title: { display: true, text: "Probability (%)" },
-          ticks: { callback: v => v + "%" }
-        }
-      }
-    }
+          ticks: { callback: (v) => v + "%" },
+        },
+      },
+    },
   });
 }
 
@@ -39,11 +46,18 @@ async function simulate() {
   const pity120 = Number(document.getElementById("pity120").value);
   const rolls = Number(document.getElementById("rolls").value);
 
-  const res = await fetch("http://localhost:8000/simulate", {
+  const res = await fetch(`${API_BASE}/simulate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pity_6: pity6, pity_120: pity120, rolls })
+    body: JSON.stringify({ pity_6: pity6, pity_120: pity120, rolls }),
   });
+
+  if (!res.ok) {
+    const txt = await res.text();
+    console.error("simulate failed:", res.status, txt);
+    alert("Backend error. Check console.");
+    return;
+  }
 
   const data = await res.json();
 
@@ -53,11 +67,18 @@ async function simulate() {
   document.getElementById("min6").innerText = String(data.min_6star);
   document.getElementById("e5").innerText = Number(data.e_5star).toFixed(2);
 
-  const resSeries = await fetch("http://localhost:8000/series", {
+  const resSeries = await fetch(`${API_BASE}/series`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pity_6: pity6, pity_120: pity120, rolls })
+    body: JSON.stringify({ pity_6: pity6, pity_120: pity120, rolls }),
   });
+
+  if (!resSeries.ok) {
+    const txt = await resSeries.text();
+    console.error("series failed:", resSeries.status, txt);
+    alert("Backend error (series). Check console.");
+    return;
+  }
 
   const seriesData = await resSeries.json();
   drawLineChart(seriesData.character);
