@@ -85,9 +85,15 @@ def limited_curve(rolls: int, pity6: int, mp: int):
     return curve
 
 
+def curve_only(rolls: int, pity6: int, mp: int):
+    """
+    Fast helper for /series.
+    DO NOT call analyze() here (that would compute heavy stats and kill performance for big rolls).
+    """
+    return limited_curve(rolls, pity6, mp)
+
+
 def _is_forced_limited(mode: int, counter: int) -> bool:
-    # mode 0: pre-limited uses MP (0..119); forced at 119
-    # mode 1: post-limited uses CP (0..239); forced at 239
     return (mode == 0 and counter == HARD_PITY_LIMITED - 1) or (mode == 1 and counter == HARD_PITY_SPARK - 1)
 
 
@@ -101,21 +107,14 @@ def _inc_counter(mode: int, counter: int) -> int:
 
 
 def min_guaranteed_6star(rolls: int, pity6: int, mp: int) -> int:
-    """
-    Deterministic "worst luck" minimum 6★ count:
-    - Hard pity 80 always triggers a 6★.
-    - Before first current limited: MP forces current limited at 120.
-    - After current limited: CP forces current limited at 240 since last current limited.
-    This assumes hard-pity 6★ is NOT the current limited (to keep guarantees as far as possible).
-    """
     pity6 = max(0, min(HARD_PITY_6 - 1, pity6))
     mp = max(0, min(HARD_PITY_LIMITED - 1, mp))
 
     n6 = 0
     p = pity6
 
-    mode = 0          # 0 = MP active, 1 = CP active
-    counter = mp      # MP or CP depending on mode
+    mode = 0
+    counter = mp
 
     for _ in range(rolls):
         if _is_forced_limited(mode, counter):
@@ -138,17 +137,6 @@ def min_guaranteed_6star(rolls: int, pity6: int, mp: int) -> int:
 
 
 def expected_5star(rolls: int, pity6: int, mp: int) -> float:
-    """
-    E[#5★] with:
-      - MP->CP rule:
-          * Before first current limited: MP forces current limited at 120.
-          * After getting current limited: MP is removed; CP forces at 240 since last current limited.
-      - 10-pull guarantee:
-          * Every 10 pulls, guaranteed at least one 5★+ (5★ or 6★).
-          * Track t = consecutive pulls since last 5★+ (0..9).
-          * If t == 9 and a non-6★ would be 4★, force it to 5★.
-    Uses sparse DP: state = (pity6, mode, counter, t).
-    """
     pity6 = max(0, min(HARD_PITY_6 - 1, pity6))
     mp = max(0, min(HARD_PITY_LIMITED - 1, mp))
 
@@ -164,24 +152,18 @@ def expected_5star(rolls: int, pity6: int, mp: int) -> float:
             if w == 0.0:
                 continue
 
-            # Forced current limited (MP/CP)
             if _is_forced_limited(mode, counter):
                 nxt[(0, 1, 0, 0)] += w
                 continue
 
             r6 = rate_6star(p)
 
-            # ---- 6★ outcomes (counts as 5★+) ----
             w6 = w * r6
             if w6:
-                # current limited: switches to CP mode, resets counter
                 nxt[(0, 1, 0, 0)] += w6 * P_CUR_LIMITED
-
-                # non-current 6★: keep mode, counter increases
                 c2 = _inc_counter(mode, counter)
                 nxt[(0, mode, c2, 0)] += w6 * (1.0 - P_CUR_LIMITED)
 
-            # ---- not 6★: 5★/4★ with 10-pull guarantee ----
             wn6 = w * (1.0 - r6)
             if not wn6:
                 continue
@@ -190,7 +172,6 @@ def expected_5star(rolls: int, pity6: int, mp: int) -> float:
             c2 = _inc_counter(mode, counter)
 
             if t == 9:
-                # force 5★
                 e5 += wn6
                 nxt[(p2, mode, c2, 0)] += wn6
             else:
@@ -209,14 +190,6 @@ def expected_5star(rolls: int, pity6: int, mp: int) -> float:
 
 
 def prob_at_least_one_category(rolls: int, pity6: int, mp: int, category: str) -> float:
-    """
-    Probability of seeing a 6★ category at least once (absorbing), with MP->CP rule applied.
-    category in {"off", "other"}:
-      - "off"   : off-banner 6★
-      - "other" : other-version limited 6★ (the 2 other limiteds in the same version)
-    Forced limited (MP/CP) is always current limited, so it never counts for "off"/"other".
-    Sparse DP: state = (pity6, mode, counter).
-    """
     pity6 = max(0, min(HARD_PITY_6 - 1, pity6))
     mp = max(0, min(HARD_PITY_LIMITED - 1, mp))
 
@@ -241,27 +214,19 @@ def prob_at_least_one_category(rolls: int, pity6: int, mp: int, category: str) -
             if w == 0.0:
                 continue
 
-            # Forced current limited: doesn't count as hit, switches to CP mode
             if _is_forced_limited(mode, counter):
                 nxt[(0, 1, 0)] += w
                 continue
 
             r6 = rate_6star(p)
 
-            # 6★ happens
             w6 = w * r6
             if w6:
-                # absorb on hit category
                 hit += w6 * p_hit
-
-                # current limited (non-hit): switch to CP mode, reset counter
                 nxt[(0, 1, 0)] += w6 * P_CUR_LIMITED
-
-                # other non-current non-hit category: keep mode, counter increases
                 c2 = _inc_counter(mode, counter)
                 nxt[(0, mode, c2)] += w6 * p_noncur_nonhit
 
-            # no 6★
             wn6 = w * (1.0 - r6)
             if wn6:
                 p2 = min(p + 1, HARD_PITY_6 - 1)

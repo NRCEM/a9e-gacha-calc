@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from core.character import analyze
+from core.character import analyze, curve_only
 
 app = FastAPI(title="A9E Banner API")
 
@@ -23,7 +23,8 @@ class SimRequest(BaseModel):
 
 @lru_cache(maxsize=512)
 def _cached_curve(pity_6: int, pity_120: int, rolls: int):
-    return analyze(rolls, pity_6, pity_120)["curve"]
+    # Fast path for chart rendering
+    return curve_only(rolls, pity_6, pity_120)
 
 
 @app.post("/simulate")
