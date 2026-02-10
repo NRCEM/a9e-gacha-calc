@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>A9E Banner Analysis</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="chart.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>A9E Banner Analysis</h1>
+
+    <div class="inputs">
+      <div class="field">
+        <label for="pity6">6★ progress (0–79)</label>
+        <input id="pity6" placeholder="e.g. 31" />
+        <div class="hint">Pulls since your last 6★ (affects soft pity).</div>
+      </div>
+
+      <div class="field">
+        <label for="pity120">Guaranteed Limited counter (0–119)</label>
+        <input id="pity120" placeholder="e.g. 0" />
+        <div class="hint">Pulls since you last got the <b>current Limited</b>.</div>
+      </div>
+
+      <div class="field">
+        <label for="rolls">Planned pulls</label>
+        <input id="rolls" placeholder="e.g. 120" />
+        <div class="hint">Compute probabilities after these pulls.</div>
+      </div>
+
+      <button class="primary" onclick="simulate()">Simulate</button>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="label">Chance to get the current Limited (≥1)</div>
+        <div class="value" id="pCur">–</div>
+      </div>
+
+      <div class="card">
+        <div class="label">Chance to get any off-banner 6★ (≥1)</div>
+        <div class="value" id="pOff">–</div>
+      </div>
+
+      <div class="card">
+        <div class="label">Chance to get other-version Limited (≥1)</div>
+        <div class="value" id="pOther">–</div>
+      </div>
+
+      <div class="card">
+        <div class="label">Minimum guaranteed total 6★ (worst luck)</div>
+        <div class="value" id="min6">–</div>
+      </div>
+
+      <div class="card">
+        <div class="label">Expected number of 5★</div>
+        <div class="value" id="e5">–</div>
+      </div>
+    </div>
+
+    <div class="charts">
+      <div class="chartTitle">Chance to get the current Limited vs. pulls</div>
+      <canvas id="charChart"></canvas>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>
