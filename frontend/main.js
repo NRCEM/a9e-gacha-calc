@@ -65,6 +65,7 @@ async function simulate() {
   document.getElementById("pOff").innerText = pct(data.p_off);
   document.getElementById("pOther").innerText = pct(data.p_other_limited);
   document.getElementById("min6").innerText = String(data.min_6star);
+  document.getElementById("minCur").innerText = String(data.min_current_limited);
   document.getElementById("e5").innerText = Number(data.e_5star).toFixed(2);
 
   const resSeries = await fetch(`${API_BASE}/series`, {
