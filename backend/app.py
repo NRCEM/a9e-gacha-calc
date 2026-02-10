@@ -23,14 +23,13 @@ class SimRequest(BaseModel):
 
 @lru_cache(maxsize=512)
 def _cached_curve(pity_6: int, pity_120: int, rolls: int):
-    # Fast path for chart rendering
     return curve_only(rolls, pity_6, pity_120)
 
 
 @app.post("/simulate")
 def api_simulate(req: SimRequest):
     out = analyze(req.rolls, req.pity_6, req.pity_120)
-    out.pop("curve", None)  # keep response small
+    out.pop("curve", None)
     return out
 
 

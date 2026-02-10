@@ -93,6 +93,25 @@ def curve_only(rolls: int, pity6: int, mp: int):
     return limited_curve(rolls, pity6, mp)
 
 
+def min_guaranteed_current_limited(rolls: int, mp: int) -> int:
+    """
+    Worst-case minimum number of *current banner limited* copies, using only guarantees:
+      - First copy: MP 120 (needs 120-mp pulls)
+      - After first copy: CP 240 per copy (since last current limited)
+    Assumes you NEVER hit current limited early (worst luck).
+    """
+    mp = max(0, min(HARD_PITY_LIMITED - 1, mp))
+    if rolls <= 0:
+        return 0
+
+    need_first = HARD_PITY_LIMITED - mp  # pulls needed to reach MP force (1..120)
+    if rolls < need_first:
+        return 0
+
+    rem = rolls - need_first
+    return 1 + (rem // HARD_PITY_SPARK)
+
+
 def _is_forced_limited(mode: int, counter: int) -> bool:
     return (mode == 0 and counter == HARD_PITY_LIMITED - 1) or (mode == 1 and counter == HARD_PITY_SPARK - 1)
 
@@ -250,6 +269,7 @@ def analyze(rolls: int, pity6: int, mp: int) -> dict:
         "p_off": p_off,
         "p_other_limited": p_other,
         "min_6star": min_guaranteed_6star(rolls, pity6, mp),
+        "min_current_limited": min_guaranteed_current_limited(rolls, mp),
         "e_5star": expected_5star(rolls, pity6, mp),
         "curve": curve,
     }
